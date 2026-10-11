@@ -8,10 +8,36 @@ using namespace std;
 const int dx[] = {-1, 1, 0, 0};
 const int dy[] = {0, 0, -1, 1};
 
-struct State {
-    int x, y, has_umbrella;
-    State(int _x, int _y, int _has) : x(_x), y(_y), has_umbrella(_has) {}
+struct Point {
+    int x, y;
+    Point(int _x, int _y) : x(_x), y(_y) {}
 };
+
+vector<vector<int>> bfs(int start_x, int start_y, const vector<vector<int>>& grid, int m, int n) {
+    vector<vector<int>> dist(m, vector<int>(n, INT_MAX));
+    queue<Point> q;
+    
+    dist[start_x][start_y] = 0;
+    q.push(Point(start_x, start_y));
+    
+    while (!q.empty()) {
+        Point curr = q.front();
+        q.pop();
+        
+        for (int dir = 0; dir < 4; dir++) {
+            int nx = curr.x + dx[dir];
+            int ny = curr.y + dy[dir];
+            
+            if (nx >= 0 && nx < m && ny >= 0 && ny < n && 
+                grid[nx][ny] != 1 && dist[nx][ny] == INT_MAX) {
+                dist[nx][ny] = dist[curr.x][curr.y] + 1;
+                q.push(Point(nx, ny));
+            }
+        }
+    }
+    
+    return dist;
+}
 
 int main() {
     ios::sync_with_stdio(false);
@@ -21,63 +47,57 @@ int main() {
     cin >> n >> m;
     
     vector<vector<int>> grid(m, vector<int>(n));
-    int start_x = -1, start_y = -1, home_x = -1, home_y = -1;
+    Point start(-1, -1), home(-1, -1);
+    vector<Point> shops;
     
     for (int i = 0; i < m; i++) {
         for (int j = 0; j < n; j++) {
             cin >> grid[i][j];
             if (grid[i][j] == 2) {
-                start_x = i; start_y = j;
+                start = Point(i, j);
             } else if (grid[i][j] == 3) {
-                home_x = i; home_y = j;
+                home = Point(i, j);
+            } else if (grid[i][j] == 4) {
+                shops.push_back(Point(i, j));
             }
         }
     }
     
-    if (start_x == -1 || home_x == -1) {
+    if (start.x == -1 || home.x == -1) {
         cout << -1 << endl;
         return 0;
     }
     
-    // BFS with state: (x, y, has_umbrella)
-    vector<vector<vector<int>>> dist(m, vector<vector<int>>(n, vector<int>(2, INT_MAX)));
-    queue<State> q;
+    // If there are no umbrella shops, no solution
+    if (shops.empty()) {
+        cout << -1 << endl;
+        return 0;
+    }
     
-    // Start without umbrella
-    int start_has_umbrella = (grid[start_x][start_y] == 4) ? 1 : 0;
-    dist[start_x][start_y][start_has_umbrella] = 0;
-    q.push(State(start_x, start_y, start_has_umbrella));
+    // BFS from start
+    vector<vector<int>> dist_from_start = bfs(start.x, start.y, grid, m, n);
     
-    while (!q.empty()) {
-        State curr = q.front();
-        q.pop();
+    // BFS from home
+    vector<vector<int>> dist_from_home = bfs(home.x, home.y, grid, m, n);
+    
+    int min_distance = INT_MAX;
+    
+    // For each umbrella shop, calculate total distance
+    for (const Point& shop : shops) {
+        int dist_to_shop = dist_from_start[shop.x][shop.y];
+        int dist_to_home = dist_from_home[shop.x][shop.y];
         
-        // If we reach home with umbrella, return the distance
-        if (curr.x == home_x && curr.y == home_y && curr.has_umbrella) {
-            cout << dist[curr.x][curr.y][curr.has_umbrella] << endl;
-            return 0;
-        }
-        
-        for (int dir = 0; dir < 4; dir++) {
-            int nx = curr.x + dx[dir];
-            int ny = curr.y + dy[dir];
-            
-            if (nx >= 0 && nx < m && ny >= 0 && ny < n && grid[nx][ny] != 1) {
-                int next_has_umbrella = curr.has_umbrella;
-                if (grid[nx][ny] == 4) {
-                    next_has_umbrella = 1; // Pick up umbrella
-                }
-                
-                if (dist[nx][ny][next_has_umbrella] == INT_MAX) {
-                    dist[nx][ny][next_has_umbrella] = dist[curr.x][curr.y][curr.has_umbrella] + 1;
-                    q.push(State(nx, ny, next_has_umbrella));
-                }
-            }
+        if (dist_to_shop != INT_MAX && dist_to_home != INT_MAX) {
+            int total_dist = dist_to_shop + dist_to_home;
+            min_distance = min(min_distance, total_dist);
         }
     }
     
-    // If we can't reach home with umbrella
-    cout << -1 << endl;
+    if (min_distance == INT_MAX) {
+        cout << -1 << endl;
+    } else {
+        cout << min_distance << endl;
+    }
     
     return 0;
 }
