@@ -13,30 +13,26 @@ struct Point {
     Point(int _x, int _y) : x(_x), y(_y) {}
 };
 
-vector<vector<int>> bfs(int start_x, int start_y, const vector<vector<int>>& grid, int m, int n) {
-    vector<vector<int>> dist(m, vector<int>(n, INT_MAX));
-    queue<Point> q;
-    
+void bfs(int start_x, int start_y, const vector<vector<int>>& grid, vector<vector<int>>& dist, int m, int n) {
+    queue<pair<int, int>> q;
+    q.push({start_x, start_y});
     dist[start_x][start_y] = 0;
-    q.push(Point(start_x, start_y));
     
     while (!q.empty()) {
-        Point curr = q.front();
+        auto curr = q.front();
         q.pop();
         
         for (int dir = 0; dir < 4; dir++) {
-            int nx = curr.x + dx[dir];
-            int ny = curr.y + dy[dir];
+            int nx = curr.first + dx[dir];
+            int ny = curr.second + dy[dir];
             
             if (nx >= 0 && nx < m && ny >= 0 && ny < n && 
-                grid[nx][ny] != 1 && dist[nx][ny] == INT_MAX) {
-                dist[nx][ny] = dist[curr.x][curr.y] + 1;
-                q.push(Point(nx, ny));
+                grid[nx][ny] != 1 && dist[nx][ny] == -1) {
+                dist[nx][ny] = dist[curr.first][curr.second] + 1;
+                q.push({nx, ny});
             }
         }
     }
-    
-    return dist;
 }
 
 int main() {
@@ -75,10 +71,12 @@ int main() {
     }
     
     // BFS from start
-    vector<vector<int>> dist_from_start = bfs(start.x, start.y, grid, m, n);
+    vector<vector<int>> dist_from_start(m, vector<int>(n, -1));
+    bfs(start.x, start.y, grid, dist_from_start, m, n);
     
     // BFS from home
-    vector<vector<int>> dist_from_home = bfs(home.x, home.y, grid, m, n);
+    vector<vector<int>> dist_from_home(m, vector<int>(n, -1));
+    bfs(home.x, home.y, grid, dist_from_home, m, n);
     
     int min_distance = INT_MAX;
     
@@ -87,7 +85,7 @@ int main() {
         int dist_to_shop = dist_from_start[shop.x][shop.y];
         int dist_to_home = dist_from_home[shop.x][shop.y];
         
-        if (dist_to_shop != INT_MAX && dist_to_home != INT_MAX) {
+        if (dist_to_shop != -1 && dist_to_home != -1) {
             int total_dist = dist_to_shop + dist_to_home;
             min_distance = min(min_distance, total_dist);
         }
